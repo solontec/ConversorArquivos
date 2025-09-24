@@ -3,77 +3,95 @@ from tkinter import filedialog, messagebox
 from fpdf import FPDF
 import os
 
-def converter_para_pdf():
-    #aqui abre uma janela pra o user selecionar arquivo 
-    caminho_arquivo_txt = filedialog.askopenfilename(
-        title="Selecione um arquivo para converter",
-        filetypes=[("Arquivos de texto", "*.txt")]
-    )
 
-    if not caminho_arquivo_txt:
-        #se o usuario cancelar a selecao do arquivo aqui nao faz absloutamente nada
-        return
+class ConversorPDF:
+    def __init__(self, master):
+        """Inicializa a interface"""
+        self.master = master
+        self.master.title("Conversor de arquivos para PDF")
+        self.master.geometry("600x300")
+        self.master.resizable(False, False)
+
+        # abaixo crio de fato aq interface configurada com o tkinter 
+        self._criar_widgets()
+
+    def _criar_widgets(self): #crio a janela com o texto, fontes e tamanho
+        """Organiza os widgets na janela"""
+        label_titulo = tk.Label(
+            self.master,
+            text="Clique no botão para converter arquivos .txt para PDF",
+            font=("Arial", 10)
+        )
+        label_titulo.pack(pady=20)
+
+        btn_converter = tk.Button(
+            self.master,
+            text="Converter Arquivos",
+            command=self.converter_para_pdf  # interface e botao
+        )
+        btn_converter.pack()
+
+    #funcao para converter de fato para pdf
+    def converter_para_pdf(self):
+        """Abre seleção de arquivos e faz a conversão"""  
+        arquivos_txt = filedialog.askopenfilenames(
+            #askopenfilename apenas um arquivo por vez, ja com o "S", podemos mobilizar mellhor eles, util para varias tafeas entao coloquei isso.
+            title="Selecione arquivos para converter",
+            filetypes=[("Arquivos de texto", "*.txt")]
+        )
+
+        if not arquivos_txt:
+            return  # caso cancelem ele nao retorna nada
+
+        sucesso = 0
+        erros = []
+
+        for caminho_arquivo_txt in arquivos_txt:
+            try:
+                # pega só  o nome do arquivo original 
+                nome_arquivo_sem_extensao = os.path.splitext(
+                    os.path.basename(caminho_arquivo_txt)
+                )[0]
+
+                # manda de fato pra dowloads quiando converter
+                caminho_pasta_usuario = os.path.expanduser("~")
+                caminho_pasta_downloads = os.path.join(caminho_pasta_usuario, "Downloads")
+
+                # Cgera o caminho final com nome do arquivo que já era
+                caminho_completo_pdf = os.path.join(
+                    caminho_pasta_downloads, f"{nome_arquivo_sem_extensao}.pdf"
+                )
+
+                # chamo o metodo para criar que irei fazer 
+                self._gerar_pdf(caminho_arquivo_txt, caminho_completo_pdf)
+                sucesso += 1
+
+            except Exception as e:
+                erros.append(f"{caminho_arquivo_txt}: {e}")
+
+        # mensagens finais
+        if sucesso > 0:
+            messagebox.showinfo(
+                "Sucesso",
+                f"{sucesso} arquivo(s) foram convertidos para PDF e salvos na pasta Downloads." #msg se der bom
+            )
+        if erros:
+            messagebox.showerror("Erros", "\n".join(erros))
+
+     
+    def _gerar_pdf(self, caminho_arquivo_txt, caminho_completo_pdf): #cofigura o documento, como ele sera de fato e como vai ser a leitura
     
-    try:
-        # Extrai apenas o nome do arquivo original (sem o caminho e a extensão)
-        nome_arquivo_sem_extensao = os.path.splitext(os.path.basename(caminho_arquivo_txt))[0]
-
-        # --- Alteração para salvar na pasta Downloads ---
-        # 1. Obtém o caminho da pasta principal do usuário (ex: C:\Users\Nome)
-        caminho_pasta_usuario = os.path.expanduser("~")
-        
-        # 2. Constrói o caminho completo para a pasta Downloads
-        caminho_pasta_downloads = os.path.join(caminho_pasta_usuario, "Downloads")
-        
-        # 3. Combina o caminho da pasta com o nome do novo arquivo PDF
-        caminho_completo_pdf = os.path.join(caminho_pasta_downloads, f"{nome_arquivo_sem_extensao}.pdf")
-
-        # Cria um objeto FPDF da biblioteca
-        pdf = FPDF('P', 'mm', 'A4') 
+        pdf = FPDF()  
         pdf.add_page()
-        pdf.set_font("Arial", size=14)
+        pdf.set_font("Helvetica", size=14)  # fontes básicas já aceitam UTF-8
 
-        # Lê o conteúdo do arquivo
         with open(caminho_arquivo_txt, "r", encoding="utf-8") as arquivo_txt:
             conteudo = arquivo_txt.read()
 
-        # Adiciona todo o conteúdo lido no PDF
-        pdf.multi_cell(0, 5, txt=conteudo)
-
-        # Salva o arquivo no novo local especificado (pasta Downloads)
+        pdf.multi_cell(0, 10, conteudo)  # agora aceita emojis, acentos e caracteres especiais
         pdf.output(caminho_completo_pdf)
-
-        messagebox.showinfo(
-            "Sucesso",
-            f"O arquivo foi convertido para PDF e salvo em '{caminho_completo_pdf}'."
-        )
-
-    except FileNotFoundError:
-            messagebox.showerror("Erro", "Arquivo não encontrado.")
-    except Exception as e:
-            messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
-
-
-# aqui vou configurar a janela com tkinter
-
-janela = tk.Tk()
-janela.title("Conversor de Arquivos para PDF")
-janela.geometry("400x150") 
-janela.resizable(False, False)
-
-# Adiciona um rótulo (texto) à janela
-label_titulo = tk.Label(janela, text="Clique no botão para converter um arquivo .txt para PDF", font=("Arial", 10))
-label_titulo.pack(pady=20)
-
-# Adiciona um botão à janela
-btn_converter = tk.Button(janela, text="Converter Arquivo", command=converter_para_pdf)
-btn_converter.pack()
-
-# Inicia o loop da interface gráfica
-janela.mainloop()
-
-
-
-
-
-
+    #emabixo verifico se o bloco está rodando certo, se sim ele gera um loop executando o codigo todo acima
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ConversorPDF(root)  
+    root.mainloop()
